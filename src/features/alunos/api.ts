@@ -1,4 +1,4 @@
-import axios, { type AxiosRequestConfig } from "axios";
+import { create, isAxiosError, isCancel, type AxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
@@ -8,7 +8,7 @@ const chaveSessao = "trainisee.alunos.session";
 const usaArmazenamentoNativo = Platform.OS === "android" || Platform.OS === "ios";
 const tamanhoPagina = 25;
 
-const api = axios.create({
+const api = create({
   baseURL: "https://parseapi.back4app.com",
   timeout: 15000,
   headers: {
@@ -58,8 +58,8 @@ async function solicitar<T>(opcoes: Opcoes, token?: string) {
     });
     return data;
   } catch (erro) {
-    if (axios.isCancel(erro)) throw erro;
-    if (!axios.isAxiosError<{ code?: number; error?: string }>(erro)) {
+    if (isCancel(erro)) throw erro;
+    if (!isAxiosError<{ code?: number; error?: string }>(erro)) {
       throw new ErroAlunos("Não foi possível concluir a operação.");
     }
     const resposta = erro.response;
@@ -123,13 +123,18 @@ export async function sair(sessao: SessaoAlunos) {
   await esquecerSessao();
 }
 
-export async function listarAlunos(sessao: SessaoAlunos, pagina: number, signal?: AbortSignal) {
+export async function listarAlunos(sessao: SessaoAlunos, pagina: number, signal?: AbortSignal, busca = "") {
+  const termoLiteral = busca.trim().replace(/[.*+?^$(){}|[\]\\]/g, "\\$&");
+  const correspondencia = { $regex: termoLiteral, $options: "i" };
   const { results } = await solicitar<{ results: Aluno[] }>({
     url: "/classes/Aluno",
     method: "GET",
     signal,
     params: {
-      where: JSON.stringify({ arquivado: { $ne: true } }),
+      where: JSON.stringify({
+        arquivado: { $ne: true },
+        ...(termoLiteral ? { $or: [{ nome: correspondencia }, { matricula: correspondencia }] } : {}),
+      }),
       keys: "nome,matricula",
       order: "nome,objectId",
       limit: tamanhoPagina,

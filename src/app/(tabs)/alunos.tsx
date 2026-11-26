@@ -14,24 +14,24 @@ type Tela =
 
 export default function Alunos() {
   const [tela, setTela] = useState<Tela>({ tipo: "restaurando" });
+  const [tentativa, setTentativa] = useState(0);
   const [cache] = useState(() => new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 15000 } },
   }));
 
-  const restaurar = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const sessao = await restaurarSessao(signal);
-      if (!signal?.aborted) setTela(sessao ? { tipo: "lista", sessao } : { tipo: "acesso" });
-    } catch {
-      if (!signal?.aborted) setTela({ tipo: "falha" });
-    }
-  }, []);
-
   useEffect(() => {
     const controlador = new AbortController();
-    void restaurar(controlador.signal);
+    const { signal } = controlador;
+    void restaurarSessao(signal).then(
+      (sessao) => {
+        if (!signal.aborted) setTela(sessao ? { tipo: "lista", sessao } : { tipo: "acesso" });
+      },
+      () => {
+        if (!signal.aborted) setTela({ tipo: "falha" });
+      },
+    );
     return () => controlador.abort();
-  }, [restaurar]);
+  }, [tentativa]);
 
   const encerrar = useCallback(() => {
     cache.clear();
@@ -53,7 +53,7 @@ export default function Alunos() {
         <Text accessibilityLiveRegion="polite">Não foi possível restaurar a sessão.</Text>
         <Button mode="outlined" onPress={() => {
           setTela({ tipo: "restaurando" });
-          void restaurar();
+          setTentativa((numero) => numero + 1);
         }}>
           Tentar novamente
         </Button>
