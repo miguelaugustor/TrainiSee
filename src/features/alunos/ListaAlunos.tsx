@@ -2,7 +2,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import { useEffect, useRef, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import {
-  ActivityIndicator, Button, Card, Dialog, HelperText, Portal, Snackbar, Text, TextInput, useTheme,
+  ActivityIndicator, Button, Card, Dialog, HelperText, Portal, Searchbar, Snackbar, Text, TextInput, useTheme,
 } from "react-native-paper";
 import { Page } from "../../components/Page";
 import {
@@ -17,6 +17,8 @@ type Acao = { tipo: "salvar"; edicao: Edicao } | { tipo: "arquivar"; aluno: Alun
 export function ListaAlunos({ sessao, aoSair, aoExpirar }: Props) {
   const { colors } = useTheme();
   const cache = useQueryClient();
+  const [textoBusca, setTextoBusca] = useState("");
+  const [busca, setBusca] = useState("");
   const [edicao, setEdicao] = useState<Edicao | null>(null);
   const [exclusao, setExclusao] = useState<Aluno | null>(null);
   const [aviso, setAviso] = useState("");
@@ -26,10 +28,15 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar }: Props) {
   const bloqueioAlteracao = useRef(false);
   const chave = ["alunos", sessao.usuarioId] as const;
 
+  useEffect(() => {
+    const espera = setTimeout(() => setBusca(textoBusca.trim()), 300);
+    return () => clearTimeout(espera);
+  }, [textoBusca]);
+
   const lista = useInfiniteQuery({
-    queryKey: chave,
+    queryKey: [...chave, busca],
     initialPageParam: 0,
-    queryFn: ({ pageParam, signal }) => listarAlunos(sessao, pageParam, signal),
+    queryFn: ({ pageParam, signal }) => listarAlunos(sessao, pageParam, signal, busca),
     getNextPageParam: (pagina) => pagina.proxima,
   });
   const alteracao = useMutation({
@@ -170,6 +177,7 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar }: Props) {
         data={alunos}
         keyExtractor={(aluno) => aluno.objectId}
         contentContainerStyle={styles.conteudo}
+        keyboardShouldPersistTaps="handled"
         refreshing={lista.isRefetching && !lista.isFetchingNextPage}
         onRefresh={() => void lista.refetch()}
         ListHeaderComponent={
@@ -187,11 +195,25 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar }: Props) {
             >
               Adicionar aluno
             </Button>
+            <Searchbar
+              placeholder="Buscar por nome ou matrícula"
+              accessibilityLabel="Buscar aluno por nome ou matrícula"
+              clearAccessibilityLabel="Limpar busca"
+              value={textoBusca}
+              onChangeText={setTextoBusca}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={120}
+            />
           </View>
         }
         ListEmptyComponent={lista.isPending
           ? <ActivityIndicator accessibilityLabel="Carregando alunos" />
-          : lista.isError ? null : <Text>Nenhum aluno cadastrado.</Text>}
+          : lista.isError ? undefined : (
+            <Text accessibilityLiveRegion="polite">
+              {busca ? "Nenhum aluno corresponde à busca." : "Nenhum aluno cadastrado."}
+            </Text>
+          )}
         renderItem={({ item }) => (
           <Card mode="outlined">
             <Card.Content>
@@ -226,7 +248,7 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar }: Props) {
           >
             Carregar mais
           </Button>
-        ) : null}
+        ) : undefined}
       />
       <Portal>
         <Dialog
