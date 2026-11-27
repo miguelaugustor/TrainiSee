@@ -5,11 +5,12 @@ import { ColorValue } from "react-native";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-const icon =
-  (name: IconName) =>
-  ({ color, size }: { color: ColorValue; size: number }) => (
+const icon = (name: IconName) => {
+  const TabIcon = ({ color, size }: { color: ColorValue; size: number }) => (
     <MaterialCommunityIcons name={name} color={color as string} size={size} />
   );
+  return TabIcon;
+};
 
 export default function TabsLayout() {
   return (
