@@ -1,10 +1,10 @@
-import { View } from "react-native";
-import { Text } from "react-native-paper";
+import { AcessoEscolar } from "../../features/escola/AcessoEscolar";
+import { ConsultaEscolar } from "../../features/escola/ConsultaEscolar";
 
 export default function Eletivas() {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-      <Text variant="headlineMedium">Eletivas</Text>
-    </View>
+    <AcessoEscolar titulo="Acessar Eletivas">
+      {(acesso) => <ConsultaEscolar {...acesso} somente="eletivas" />}
+    </AcessoEscolar>
   );
 }

@@ -64,7 +64,7 @@ export function AcessoAlunos({ aoEntrar, aviso, titulo = "Acessar Alunos" }: Pro
           {cadastro ? "Criar conta" : titulo}
         </Text>
         {aviso ? <Text accessibilityLiveRegion="polite">{aviso}</Text> : null}
-        {cadastro ? <Text>A direção precisa autorizar sua conta no perfil EquipeEscolar.</Text> : null}
+        {cadastro ? <Text>Confirme seu e-mail para que a escola possa vincular a sua conta.</Text> : null}
         <TextInput
           label="E-mail"
           mode="outlined"

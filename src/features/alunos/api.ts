@@ -4,12 +4,14 @@ import { Platform } from "react-native";
 
 const appId = process.env.EXPO_PUBLIC_BACK4APP_APP_ID?.trim();
 const clientKey = process.env.EXPO_PUBLIC_BACK4APP_CLIENT_KEY?.trim();
-const chaveSessao = "trainisee.alunos.session";
+const urlLocal = typeof __DEV__ !== "undefined" && __DEV__ ? process.env.EXPO_PUBLIC_TRAINISEE_API_LOCAL?.trim() : undefined;
+const apiLocal = urlLocal && /^http:\/\/(?:localhost|127\.0\.0\.1):\d+\/parse$/.test(urlLocal) ? urlLocal : undefined;
+const chaveSessao = apiLocal ? "trainisee.alunos.session.local" : "trainisee.alunos.session";
 const usaArmazenamentoNativo = Platform.OS === "android" || Platform.OS === "ios";
 const tamanhoPagina = 25;
 
 const api = create({
-  baseURL: "https://parseapi.back4app.com",
+  baseURL: apiLocal ?? "https://parseapi.back4app.com",
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
