@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { Page } from "../../components/Page";
 import { AcessoAlunos } from "../../features/alunos/AcessoAlunos";
 import { ListaAlunos } from "../../features/alunos/ListaAlunos";
 import { esquecerSessao, restaurarSessao, type SessaoAlunos } from "../../features/alunos/api";
+import { ListaProfessores } from "../../features/professores/ListaProfessores";
 
 type Tela =
   | { tipo: "restaurando" }
@@ -13,6 +15,9 @@ type Tela =
   | { tipo: "lista"; sessao: SessaoAlunos };
 
 export default function Alunos() {
+  const router = useRouter();
+  const { secao } = useLocalSearchParams<{ secao?: string }>();
+  const professores = secao === "professores";
   const [tela, setTela] = useState<Tela>({ tipo: "restaurando" });
   const [tentativa, setTentativa] = useState(0);
   const [cache] = useState(() => new QueryClient({
@@ -61,11 +66,26 @@ export default function Alunos() {
     );
   }
   if (tela.tipo === "acesso") {
-    return <AcessoAlunos aviso={tela.aviso} aoEntrar={(sessao) => setTela({ tipo: "lista", sessao })} />;
+    return (
+      <AcessoAlunos
+        aviso={tela.aviso}
+        titulo={professores ? "Acessar Professores" : undefined}
+        aoEntrar={(sessao) => setTela({ tipo: "lista", sessao })}
+      />
+    );
   }
   return (
     <QueryClientProvider client={cache}>
-      <ListaAlunos sessao={tela.sessao} aoSair={encerrar} aoExpirar={expirar} />
+      <Tabs.Screen options={{ headerTitle: professores ? "Professores" : "Alunos" }} />
+      {professores ? (
+        <ListaProfessores
+          sessao={tela.sessao}
+          aoExpirar={expirar}
+          aoVoltar={() => router.setParams({ secao: "alunos" })}
+        />
+      ) : (
+        <ListaAlunos sessao={tela.sessao} aoSair={encerrar} aoExpirar={expirar} />
+      )}
     </QueryClientProvider>
   );
 }
