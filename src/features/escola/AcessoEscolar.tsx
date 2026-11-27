@@ -5,14 +5,13 @@ import { Page } from "../../components/Page";
 import { AcessoAlunos } from "../alunos/AcessoAlunos";
 import { ErroAlunos, esquecerSessao, restaurarSessao, sair, sessaoExpirada, type SessaoAlunos } from "../alunos/api";
 import { consultarPerfil, type PerfilEscolar } from "./api";
+import { useSessaoStore, type EstadoSessao } from "./sessaoStore";
 
-type Estado =
-  | { tipo: "restaurando" | "falha" }
-  | { tipo: "acesso"; aviso?: string }
-  | { tipo: "autenticado"; sessao: SessaoAlunos };
+const setEstado = useSessaoStore.getState().definir;
 
 const Contexto = createContext<{
-  estado: Estado;
+  estado: EstadoSessao;
+
   entrar: (sessao: SessaoAlunos) => void;
   encerrar: () => void;
   expirar: () => Promise<void>;
@@ -20,7 +19,7 @@ const Contexto = createContext<{
 } | null>(null);
 
 export function SessaoEscolarProvider({ children }: { children: ReactNode }) {
-  const [estado, setEstado] = useState<Estado>({ tipo: "restaurando" });
+    const estado = useSessaoStore((s) => s.estado);
   const [tentativa, setTentativa] = useState(0);
   const [cache] = useState(() => new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 15000 } },
