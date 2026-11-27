@@ -1,6 +1,8 @@
 import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
 import { Button } from "react-native-paper";
 import { ListaAlunos } from "../../features/alunos/ListaAlunos";
+import { AulasEscolares } from "../../features/aulas/AulasEscolares";
+import { FrequenciaEscolar } from "../../features/aulas/FrequenciaEscolar";
 import { AcessoEscolar, type SessaoComPerfil } from "../../features/escola/AcessoEscolar";
 import { ConsultaEscolar } from "../../features/escola/ConsultaEscolar";
 import { ListaMatriculas } from "../../features/matriculas/ListaMatriculas";
@@ -16,10 +18,26 @@ export default function Alunos() {
 
 function ConteudoEscolar(acesso: SessaoComPerfil) {
   const router = useRouter();
-  const { secao, aluno } = useLocalSearchParams<{ secao?: string; aluno?: string }>();
+  const { secao, aluno, aula } = useLocalSearchParams<{ secao?: string; aluno?: string; aula?: string }>();
   const administrador = acesso.perfil.perfil === "administrador";
+  const equipe = administrador || acesso.perfil.perfil === "professor";
   const alunoId = secao === "matriculas" && typeof aluno === "string" ? aluno : undefined;
-  const voltarParaAlunos = () => router.setParams({ secao: "alunos", aluno: "" });
+  const voltarParaAlunos = () => router.setParams({ secao: "alunos", aluno: "", aula: "" });
+  const abrirAulas = () => router.setParams({ secao: "aulas", aula: "" });
+
+  if (equipe && secao === "frequencia" && typeof aula === "string" && aula) {
+    return <>
+      <Tabs.Screen options={{ headerTitle: "Frequência" }} />
+      <FrequenciaEscolar key={aula} {...acesso} aulaId={aula} aoVoltar={abrirAulas} />
+    </>;
+  }
+  if (equipe && secao === "aulas") {
+    return <>
+      <Tabs.Screen options={{ headerTitle: "Aulas" }} />
+      <AulasEscolares {...acesso} aoVoltar={voltarParaAlunos}
+        aoAbrirFrequencia={(id) => router.setParams({ secao: "frequencia", aula: id })} />
+    </>;
+  }
 
   if (!administrador || secao === "consulta") {
     return (
@@ -27,7 +45,10 @@ function ConteudoEscolar(acesso: SessaoComPerfil) {
         <Tabs.Screen options={{ headerTitle: "Área escolar" }} />
         <ConsultaEscolar
           {...acesso}
-          antes={administrador ? <Button onPress={voltarParaAlunos}>Voltar para Alunos</Button> : undefined}
+          antes={equipe ? <>
+            {administrador ? <Button onPress={voltarParaAlunos}>Voltar para Alunos</Button> : null}
+            <Button mode="outlined" icon="calendar-check" onPress={abrirAulas}>Aulas e frequência</Button>
+          </> : undefined}
         />
       </>
     );
@@ -48,7 +69,10 @@ function ConteudoEscolar(acesso: SessaoComPerfil) {
           aoSair={acesso.encerrar}
           aoExpirar={acesso.expirar}
           aoAbrirMatriculas={(id) => router.setParams({ secao: "matriculas", aluno: id })}
-          atalhos={<Button icon="magnify" mode="outlined" onPress={() => router.setParams({ secao: "consulta" })}>Consultar dados</Button>}
+          atalhos={<>
+            <Button icon="magnify" mode="outlined" onPress={() => router.setParams({ secao: "consulta" })}>Consultar dados</Button>
+            <Button icon="calendar-check" mode="outlined" onPress={abrirAulas}>Aulas e frequência</Button>
+          </>}
         />
       )}
     </>

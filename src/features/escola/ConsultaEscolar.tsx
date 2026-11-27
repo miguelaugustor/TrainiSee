@@ -5,7 +5,7 @@ import { ActivityIndicator, Button, Card, Chip, HelperText, Searchbar, Text } fr
 import { Page } from "../../components/Page";
 import { acessoNegado, sessaoExpirada } from "../alunos/api";
 import { type SessaoComPerfil } from "./AcessoEscolar";
-import { consultarRegistros, nomesDosPerfis, type TipoConsulta } from "./api";
+import { consultarRegistros, nomesDosPerfis, type RegistroEscolar, type TipoConsulta } from "./api";
 
 const categorias: { tipo: TipoConsulta; titulo: string }[] = [
   { tipo: "eletivas", titulo: "Eletivas" },
@@ -16,9 +16,13 @@ const categorias: { tipo: TipoConsulta; titulo: string }[] = [
   { tipo: "professores", titulo: "Professores" },
 ];
 
-type Props = SessaoComPerfil & { somente?: TipoConsulta; antes?: ReactNode };
+type Props = SessaoComPerfil & {
+  somente?: TipoConsulta;
+  antes?: ReactNode;
+  acoes?: (registro: RegistroEscolar, tipo: TipoConsulta) => ReactNode;
+};
 
-export function ConsultaEscolar({ sessao, perfil, expirar, botaoSair, somente, antes }: Props) {
+export function ConsultaEscolar({ sessao, perfil, expirar, botaoSair, somente, antes, acoes }: Props) {
   const [tipoEscolhido, setTipoEscolhido] = useState<TipoConsulta>("eletivas");
   const [texto, setTexto] = useState("");
   const [busca, setBusca] = useState("");
@@ -74,14 +78,16 @@ export function ConsultaEscolar({ sessao, perfil, expirar, botaoSair, somente, a
         />
         {lista.isPending ? <ActivityIndicator accessibilityLabel="Carregando registros" /> : null}
         {lista.isSuccess && !registros.length ? <Text>Nenhum registro encontrado.</Text> : null}
-        {registros.map((item) => (
-          <Card key={item.id} mode="outlined">
+        {registros.map((item) => {
+          const botoes = acoes?.(item, tipo);
+          return <Card key={item.id} mode="outlined">
             <Card.Content>
               <Text variant="titleMedium">{item.titulo || "Registro sem título"}</Text>
               {item.detalhes ? <Text>{item.detalhes}</Text> : null}
             </Card.Content>
-          </Card>
-        ))}
+            {botoes ? <Card.Actions style={styles.opcoes}>{botoes}</Card.Actions> : null}
+          </Card>;
+        })}
         {lista.isError ? (
           <>
             <HelperText type="error" accessibilityLiveRegion="polite">{lista.error.message}</HelperText>
