@@ -10,11 +10,16 @@ import {
   type Aluno, type DadosAluno, type SessaoAlunos,
 } from "./api";
 
-type Props = { sessao: SessaoAlunos; aoSair: () => void; aoExpirar: () => Promise<void> };
+type Props = {
+  sessao: SessaoAlunos;
+  aoSair: () => void;
+  aoExpirar: () => Promise<void>;
+  aoAbrirMatriculas: (alunoId: string) => void;
+};
 type Edicao = DadosAluno & { id?: string };
 type Acao = { tipo: "salvar"; edicao: Edicao } | { tipo: "arquivar"; aluno: Aluno };
 
-export function ListaAlunos({ sessao, aoSair, aoExpirar }: Props) {
+export function ListaAlunos({ sessao, aoSair, aoExpirar, aoAbrirMatriculas }: Props) {
   const { colors } = useTheme();
   const cache = useQueryClient();
   const [textoBusca, setTextoBusca] = useState("");
@@ -44,7 +49,11 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar }: Props) {
       ? salvarAluno(sessao, acao.edicao, acao.edicao.id)
       : arquivarAluno(sessao, acao.aluno.objectId),
     async onSuccess(_resposta, acao) {
-      await cache.invalidateQueries({ queryKey: chave });
+      const id = acao.tipo === "arquivar" ? acao.aluno.objectId : acao.edicao.id;
+      await Promise.all([
+        cache.invalidateQueries({ queryKey: chave }),
+        id ? cache.invalidateQueries({ queryKey: ["aluno-matriculas", sessao.usuarioId, id] }) : undefined,
+      ]);
       setEdicao(null);
       setExclusao(null);
       setAviso(acao.tipo === "arquivar" ? "Aluno arquivado." : acao.edicao.id ? "Aluno atualizado." : "Aluno cadastrado.");
@@ -220,7 +229,8 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar }: Props) {
               <Text variant="titleMedium">{item.nome || "Aluno sem nome"}</Text>
               <Text variant="bodyMedium">Matrícula {item.matricula || "indisponível"}</Text>
             </Card.Content>
-            <Card.Actions>
+            <Card.Actions style={styles.acoes}>
+              <Button disabled={saindo} onPress={() => aoAbrirMatriculas(item.objectId)}>Matrículas</Button>
               <Button
                 textColor={colors.error}
                 disabled={saindo}
@@ -286,4 +296,5 @@ const styles = StyleSheet.create({
   bloco: { gap: 12 },
   cabecalho: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   conta: { flexShrink: 1 },
+  acoes: { flexWrap: "wrap" },
 });

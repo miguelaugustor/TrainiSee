@@ -4,9 +4,9 @@ import { Button, HelperText, Text, TextInput } from "react-native-paper";
 import { Page } from "../../components/Page";
 import { autenticar, ErroAlunos, type SessaoAlunos } from "./api";
 
-type Props = { aoEntrar: (sessao: SessaoAlunos) => void; aviso?: string };
+type Props = { aoEntrar: (sessao: SessaoAlunos) => void; aviso?: string; titulo?: string };
 
-export function AcessoAlunos({ aoEntrar, aviso }: Props) {
+export function AcessoAlunos({ aoEntrar, aviso, titulo = "Acessar Alunos" }: Props) {
   const [cadastro, setCadastro] = useState(false);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -61,10 +61,10 @@ export function AcessoAlunos({ aoEntrar, aviso }: Props) {
     <Page>
       <View style={styles.form}>
         <Text accessibilityRole="header" variant="headlineSmall">
-          {cadastro ? "Criar conta" : "Acessar Alunos"}
+          {cadastro ? "Criar conta" : titulo}
         </Text>
         {aviso ? <Text accessibilityLiveRegion="polite">{aviso}</Text> : null}
-        {cadastro ? <Text>A direção precisa autorizar sua conta para acessar os alunos.</Text> : null}
+        {cadastro ? <Text>A direção precisa autorizar sua conta no perfil EquipeEscolar.</Text> : null}
         <TextInput
           label="E-mail"
           mode="outlined"

@@ -44,7 +44,7 @@ const mensagens: Record<number, string> = {
 export const sessaoExpirada = (erro: unknown) => erro instanceof ErroAlunos && erro.codigo === 209;
 export const acessoNegado = (erro: unknown) => erro instanceof ErroAlunos && erro.codigo === 119;
 
-async function solicitar<T>(opcoes: Opcoes, token?: string) {
+export async function solicitar<T>(opcoes: Opcoes, token?: string) {
   if (!appId || !clientKey) {
     throw new ErroAlunos("Configure o ID do aplicativo e a chave de cliente do Back4App.");
   }

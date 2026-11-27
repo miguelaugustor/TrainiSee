@@ -22,11 +22,18 @@ export default function Home() {
       </View>
       <View style={styles.section}>
         <Text variant="titleLarge" accessibilityRole="header">Acesso rápido</Text>
-        <Card mode="outlined" onPress={() => router.push("/alunos")}>
+        <Card mode="outlined" onPress={() => router.push({ pathname: "/alunos", params: { secao: "alunos" } })}>
           <Card.Title
             title="Alunos"
             subtitle="Consultar e gerenciar cadastros"
             left={(props) => <CardIcon icon="account-group-outline" size={props.size} />}
+          />
+        </Card>
+        <Card mode="outlined" onPress={() => router.push({ pathname: "/alunos", params: { secao: "professores" } })}>
+          <Card.Title
+            title="Professores"
+            subtitle="Consultar e gerenciar cadastros"
+            left={(props) => <CardIcon icon="account-tie-outline" size={props.size} />}
           />
         </Card>
         <Card mode="outlined" onPress={() => router.push("/sobre")}>
