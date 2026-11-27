@@ -24,8 +24,8 @@ export default function Home() {
         <Text variant="titleLarge" accessibilityRole="header">Acesso rápido</Text>
         <Card mode="outlined" onPress={() => router.push({ pathname: "/alunos", params: { secao: "alunos" } })}>
           <Card.Title
-            title="Alunos"
-            subtitle="Consultar e gerenciar cadastros"
+            title="Área escolar"
+            subtitle="Entrar e consultar dados da escola"
             left={(props) => <CardIcon icon="account-group-outline" size={props.size} />}
           />
         </Card>

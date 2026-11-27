@@ -1,10 +1,11 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator, Button, Card, Dialog, HelperText, Portal, Searchbar, Snackbar, Text, TextInput, useTheme,
 } from "react-native-paper";
 import { Page } from "../../components/Page";
+import { VinculoConta } from "../escola/VinculoConta";
 import {
   acessoNegado, arquivarAluno, listarAlunos, sair, salvarAluno, sessaoExpirada,
   type Aluno, type DadosAluno, type SessaoAlunos,
@@ -15,17 +16,19 @@ type Props = {
   aoSair: () => void;
   aoExpirar: () => Promise<void>;
   aoAbrirMatriculas: (alunoId: string) => void;
+  atalhos?: ReactNode;
 };
 type Edicao = DadosAluno & { id?: string };
 type Acao = { tipo: "salvar"; edicao: Edicao } | { tipo: "arquivar"; aluno: Aluno };
 
-export function ListaAlunos({ sessao, aoSair, aoExpirar, aoAbrirMatriculas }: Props) {
+export function ListaAlunos({ sessao, aoSair, aoExpirar, aoAbrirMatriculas, atalhos }: Props) {
   const { colors } = useTheme();
   const cache = useQueryClient();
   const [textoBusca, setTextoBusca] = useState("");
   const [busca, setBusca] = useState("");
   const [edicao, setEdicao] = useState<Edicao | null>(null);
   const [exclusao, setExclusao] = useState<Aluno | null>(null);
+  const [vinculo, setVinculo] = useState<Aluno | null>(null);
   const [aviso, setAviso] = useState("");
   const [erroSaida, setErroSaida] = useState("");
   const [saindo, setSaindo] = useState(false);
@@ -196,6 +199,7 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar, aoAbrirMatriculas }: Pr
               {botaoSair}
             </View>
             {mensagemSaida}
+            {atalhos}
             <Button
               mode="contained"
               icon="plus"
@@ -230,6 +234,7 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar, aoAbrirMatriculas }: Pr
               <Text variant="bodyMedium">Matrícula {item.matricula || "indisponível"}</Text>
             </Card.Content>
             <Card.Actions style={styles.acoes}>
+              <Button disabled={saindo} onPress={() => setVinculo(item)}>Vincular conta</Button>
               <Button disabled={saindo} onPress={() => aoAbrirMatriculas(item.objectId)}>Matrículas</Button>
               <Button
                 textColor={colors.error}
@@ -260,6 +265,10 @@ export function ListaAlunos({ sessao, aoSair, aoExpirar, aoAbrirMatriculas }: Pr
           </Button>
         ) : undefined}
       />
+      {vinculo ? (
+        <VinculoConta sessao={sessao} tipo="aluno" registroId={vinculo.objectId} nome={vinculo.nome}
+          aoFechar={() => setVinculo(null)} aoExpirar={aoExpirar} />
+      ) : null}
       <Portal>
         <Dialog
           visible={Boolean(exclusao)}

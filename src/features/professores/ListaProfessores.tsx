@@ -6,6 +6,7 @@ import {
 } from "react-native-paper";
 import { Page } from "../../components/Page";
 import { acessoNegado, sessaoExpirada, type SessaoAlunos } from "../alunos/api";
+import { VinculoConta } from "../escola/VinculoConta";
 import { arquivarProfessor, listarProfessores, salvarProfessor, type DadosProfessor, type Professor } from "./api";
 
 type Props = { sessao: SessaoAlunos; aoVoltar: () => void; aoExpirar: () => Promise<void> };
@@ -17,6 +18,7 @@ export function ListaProfessores({ sessao, aoVoltar, aoExpirar }: Props) {
   const cache = useQueryClient();
   const [edicao, setEdicao] = useState<Edicao | null>(null);
   const [arquivamento, setArquivamento] = useState<Professor | null>(null);
+  const [vinculo, setVinculo] = useState<Professor | null>(null);
   const [aviso, setAviso] = useState("");
   const bloqueio = useRef(false);
   const chave = ["professores", sessao.usuarioId] as const;
@@ -129,7 +131,8 @@ export function ListaProfessores({ sessao, aoVoltar, aoExpirar }: Props) {
         {professores.map((professor) => (
           <Card key={professor.objectId} mode="outlined">
             <Card.Title title={professor.nome || "Professor sem nome"} subtitle={professor.email || undefined} />
-            <Card.Actions>
+            <Card.Actions style={styles.acoes}>
+              <Button disabled={alteracao.isPending} onPress={() => setVinculo(professor)}>Vincular conta</Button>
               <Button textColor={colors.error} disabled={alteracao.isPending} onPress={() => {
                 alteracao.reset();
                 setArquivamento(professor);
@@ -149,6 +152,10 @@ export function ListaProfessores({ sessao, aoVoltar, aoExpirar }: Props) {
           </Button>
         ) : null}
       </View>
+      {vinculo ? (
+        <VinculoConta sessao={sessao} tipo="professor" registroId={vinculo.objectId} nome={vinculo.nome}
+          aoFechar={() => setVinculo(null)} aoExpirar={aoExpirar} />
+      ) : null}
       <Portal>
         <Dialog visible={Boolean(arquivamento)} dismissable={!alteracao.isPending}
           dismissableBackButton={!alteracao.isPending} onDismiss={() => setArquivamento(null)}>
@@ -172,4 +179,5 @@ export function ListaProfessores({ sessao, aoVoltar, aoExpirar }: Props) {
 const styles = StyleSheet.create({
   grupo: { gap: 12 },
   voltar: { alignSelf: "flex-start" },
+  acoes: { flexWrap: "wrap" },
 });

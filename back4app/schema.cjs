@@ -12,10 +12,12 @@ const permissions = {
 const text = { type: "String" };
 const flag = { type: "Boolean" };
 const pointer = (targetClass) => ({ type: "Pointer", targetClass });
+const conta = pointer("_User");
+const cadastrosComConta = ["Aluno", "Professor"];
 
 const classes = {
-  Aluno: { nome: text, matricula: text, arquivado: flag },
-  Professor: { nome: text, email: text, arquivado: flag },
+  Aluno: { nome: text, matricula: text, arquivado: flag, conta },
+  Professor: { nome: text, email: text, arquivado: flag, conta },
   Eletiva: { titulo: text, area: text, descricao: text, professor: pointer("Professor"), arquivado: flag },
   Aula: { titulo: text, data: text, horario: text, eletiva: pointer("Eletiva"), arquivado: flag },
   Matricula: { aluno: pointer("Aluno"), eletiva: pointer("Eletiva"), situacao: text },
@@ -31,6 +33,7 @@ const schemas = Object.entries(classes).map(([className, fields]) => ({
 function schemaMatches(existing, definition) {
   return Object.entries(definition.fields).every(([name, field]) => {
     const actual = existing.fields?.[name];
+    if (!actual && name === "conta" && cadastrosComConta.includes(definition.className)) return true;
     return actual?.type === field.type && actual?.targetClass === field.targetClass;
   }) && Object.entries(permissions).every(([operation, allowed]) => {
     const configured = existing.classLevelPermissions?.[operation];
@@ -54,11 +57,15 @@ async function configure(request) {
   const { results: roles } = await request(`/roles?where=${encodeURIComponent(JSON.stringify({ name: role }))}`);
   if (!roles.length) {
     await request("/roles", { name: role, ACL: {} });
+  } else if (!roles[0].ACL || Object.values(roles[0].ACL).some((acesso) => acesso.write === true)) {
+    throw new Error("Restrinja a edição do perfil EquipeEscolar ao painel do Back4App.");
   }
 
   for (const schema of schemas) {
     if (!byName.has(schema.className)) {
       await request(`/schemas/${schema.className}`, schema);
+    } else if (cadastrosComConta.includes(schema.className) && !byName.get(schema.className).fields?.conta) {
+      await request(`/schemas/${schema.className}`, { fields: { conta } }, "PUT");
     }
   }
 }
@@ -70,9 +77,9 @@ async function main() {
     throw new Error("Configure BACK4APP_APPLICATION_ID e BACK4APP_MASTER_KEY no processo administrativo.");
   }
 
-  await configure(async (path, body) => {
+  await configure(async (path, body, method = body ? "POST" : "GET") => {
     const response = await fetch(`https://parseapi.back4app.com${path}`, {
-      method: body ? "POST" : "GET",
+      method,
       headers: {
         "X-Parse-Application-Id": appId,
         "X-Parse-Master-Key": masterKey,
