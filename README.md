@@ -37,3 +37,21 @@ O aplicativo permite que a escola ofereça eletivas e acompanhe os alunos. Admin
    npm install
    ```
 2. Crie um arquivo `.env` na raiz, com as chaves do Back4App:
+3. EXPO_PUBLIC_BACK4APP_APP_ID=seu-application-id
+EXPO_PUBLIC_BACK4APP_CLIENT_KEY=sua-client-key
+
+3. Inicie o app:
+   ```bash
+   npx expo start -c
+   ```
+4. Abra o QR Code no Expo Go.
+
+## Divisão do trabalho
+
+- **Miguel Augusto:** (preencha: telas, conexão com o back-end, estilização)
+- **João Emanuel:** (preencha: telas, conexão com o back-end, estilização)
+
+## Entrega
+
+- App publicado no Expo: (link)
+- Vídeo no YouTube: (link)
