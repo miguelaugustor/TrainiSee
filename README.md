@@ -48,8 +48,8 @@ EXPO_PUBLIC_BACK4APP_CLIENT_KEY=sua-client-key
 
 ## Divisão do trabalho
 
-- **Miguel Augusto:** (preencha: telas, conexão com o back-end, estilização)
-- **João Emanuel:** (preencha: telas, conexão com o back-end, estilização)
+- **Miguel Augusto:** telas do app (Eletivas, campos de conteúdo, carga horária e vídeo com botão "Assistir"), estilização com React Native Paper, configuração do `.env`, README e publicação no Expo.
+- **João Emanuel:** back-end no Back4App (classes, chaves, permissões e conta de administrador), conexão do app com o back-end e login com perfis de acesso.
 
 ## Entrega
 
