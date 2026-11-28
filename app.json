@@ -1,8 +1,15 @@
 {
   "expo": {
-    "name": "trainisee-tmp",
-    "slug": "trainisee-tmp",
+    "name": "TrainiSee",
+    "slug": "trainisee",
+    "owner": "joao-emanuels-team",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3081df6a-a124-4e93-9800-36d0dae3f06a"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "trainiseetmp",
@@ -38,6 +45,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3081df6a-a124-4e93-9800-36d0dae3f06a"
+      }
     }
   }
 }
