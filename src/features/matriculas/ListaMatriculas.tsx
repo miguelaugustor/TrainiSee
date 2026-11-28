@@ -17,7 +17,7 @@ type Alteracao = { tipo: "salvar"; edicao: Edicao } | { tipo: "remover"; matricu
 
 function tituloEletiva(eletiva?: EletivaResumo) {
   const titulo = eletiva?.titulo || "Eletiva indisponível";
-  return eletiva?.arquivado ? titulo + " (arquivada)" : titulo;
+  return eletiva?.arquivado || eletiva?.arquivada ? titulo + " (arquivada)" : titulo;
 }
 
 export function ListaMatriculas({ sessao, alunoId, aoVoltar, aoExpirar }: Props) {

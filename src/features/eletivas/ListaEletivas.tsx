@@ -92,11 +92,14 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
         id: eletiva.objectId,
         titulo: eletiva.titulo ?? "",
         descricao: eletiva.descricao ?? "",
+        videoUrl: eletiva.videoUrl ?? "",
+        cargaHoraria: eletiva.cargaHoraria?.toString().replace(".", ",") ?? "",
+        conteudo: eletiva.conteudo ?? "",
         area: AREAS.includes(eletiva.area) ? eletiva.area : "",
         professorId: eletiva.professor?.objectId ?? "",
         professorNome: eletiva.professor?.nome,
       }
-      : { titulo: "", descricao: "", area: AREAS[0], professorId: "" });
+      : { titulo: "", descricao: "", videoUrl: "", cargaHoraria: "", conteudo: "", area: AREAS[0], professorId: "" });
   }
 
   if (expirou) return <Page><ActivityIndicator accessibilityLabel="Encerrando sessão" /></Page>;
@@ -170,6 +173,35 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
             disabled={alteracao.isPending}
             onChangeText={(descricao) => setEdicao({ ...edicao, descricao })}
           />
+          <TextInput
+            label="Carga horária (horas)"
+            mode="outlined"
+            keyboardType="decimal-pad"
+            value={edicao.cargaHoraria}
+            disabled={alteracao.isPending}
+            onChangeText={(cargaHoraria) => setEdicao({ ...edicao, cargaHoraria })}
+          />
+          <TextInput
+            label="Conteúdo"
+            mode="outlined"
+            multiline
+            numberOfLines={3}
+            value={edicao.conteudo}
+            maxLength={500}
+            disabled={alteracao.isPending}
+            onChangeText={(conteudo) => setEdicao({ ...edicao, conteudo })}
+          />
+          <TextInput
+            label="Link do vídeo (opcional)"
+            mode="outlined"
+            keyboardType="url"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={edicao.videoUrl}
+            maxLength={300}
+            disabled={alteracao.isPending}
+            onChangeText={(videoUrl) => setEdicao({ ...edicao, videoUrl })}
+          />
           <Text variant="labelLarge">Área</Text>
           <View style={styles.chips}>
             {AREAS.map((a) => (
@@ -193,7 +225,8 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
           ) : null}
           <Button
             mode="contained"
-            disabled={alteracao.isPending || !edicao.professorId || !edicao.titulo.trim() || !edicao.area}
+            disabled={alteracao.isPending || !edicao.professorId || !edicao.titulo.trim() || !edicao.area ||
+              !edicao.cargaHoraria.trim() || !edicao.conteudo.trim()}
             loading={alteracao.isPending}
             onPress={() => executar({ tipo: "salvar", edicao })}
           >
@@ -254,10 +287,12 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
         renderItem={({ item }) => (
           <Card mode="outlined">
             <Card.Title title={item.titulo || "Eletiva sem título"}
-              subtitle={[item.area, item.professor?.nome].filter(Boolean).join(" · ")} />
-            {item.descricao ? (
+              subtitle={[item.area, item.professor?.nome, item.cargaHoraria && `${item.cargaHoraria} h`]
+                .filter(Boolean).join(" · ")} />
+            {item.descricao || item.conteudo ? (
               <Card.Content>
-                <Text variant="bodyMedium">{item.descricao}</Text>
+                {item.descricao ? <Text variant="bodyMedium">{item.descricao}</Text> : null}
+                {item.conteudo ? <Text variant="bodyMedium">{item.conteudo}</Text> : null}
               </Card.Content>
             ) : null}
             {podeEditar ? (

@@ -11,14 +11,22 @@ const permissions = {
 };
 const text = { type: "String" };
 const flag = { type: "Boolean" };
+const number = { type: "Number" };
 const pointer = (targetClass) => ({ type: "Pointer", targetClass });
 const conta = pointer("_User");
-const cadastrosComConta = ["Aluno", "Professor"];
+const camposNovos = {
+  Aluno: { conta },
+  Professor: { conta },
+  Eletiva: { videoUrl: text, cargaHoraria: number, conteudo: text },
+};
 
 const classes = {
   Aluno: { nome: text, matricula: text, arquivado: flag, conta },
   Professor: { nome: text, email: text, arquivado: flag, conta },
-  Eletiva: { titulo: text, area: text, descricao: text, professor: pointer("Professor"), arquivado: flag },
+  Eletiva: {
+    titulo: text, area: text, descricao: text, professor: pointer("Professor"), arquivado: flag,
+    ...camposNovos.Eletiva,
+  },
   Aula: { titulo: text, data: text, horario: text, eletiva: pointer("Eletiva"), arquivado: flag },
   Matricula: { aluno: pointer("Aluno"), eletiva: pointer("Eletiva"), situacao: text },
   Frequencia: { aluno: pointer("Aluno"), aula: pointer("Aula"), presente: flag, observacao: text },
@@ -33,7 +41,7 @@ const schemas = Object.entries(classes).map(([className, fields]) => ({
 function schemaMatches(existing, definition) {
   return Object.entries(definition.fields).every(([name, field]) => {
     const actual = existing.fields?.[name];
-    if (!actual && name === "conta" && cadastrosComConta.includes(definition.className)) return true;
+    if (!actual && Object.hasOwn(camposNovos[definition.className] ?? {}, name)) return true;
     return actual?.type === field.type && actual?.targetClass === field.targetClass;
   }) && Object.entries(permissions).every(([operation, allowed]) => {
     const configured = existing.classLevelPermissions?.[operation];
@@ -62,10 +70,15 @@ async function configure(request) {
   }
 
   for (const schema of schemas) {
-    if (!byName.has(schema.className)) {
+    const existente = byName.get(schema.className);
+    if (!existente) {
       await request(`/schemas/${schema.className}`, schema);
-    } else if (cadastrosComConta.includes(schema.className) && !byName.get(schema.className).fields?.conta) {
-      await request(`/schemas/${schema.className}`, { fields: { conta } }, "PUT");
+      continue;
+    }
+    const fields = Object.fromEntries(Object.entries(camposNovos[schema.className] ?? {})
+      .filter(([name]) => !existente.fields?.[name]));
+    if (Object.keys(fields).length) {
+      await request(`/schemas/${schema.className}`, { fields }, "PUT");
     }
   }
 }
