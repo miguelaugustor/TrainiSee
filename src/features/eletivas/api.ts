@@ -1,9 +1,13 @@
 import { ErroAlunos, solicitar, type SessaoAlunos } from "../alunos/api";
 
-export type DadosEletiva = { titulo: string; descricao: string; area: string };
-export type Eletiva = DadosEletiva & { objectId: string };
+export type DadosEletiva = { titulo: string; descricao: string; area: string; professorId: string };
+export type Eletiva = Omit<DadosEletiva, "professorId"> & {
+  objectId: string;
+  professor?: { objectId: string; nome?: string };
+};
 
-export const AREAS = ["Tecnologia", "Artes", "Idiomas", "Esportes", "Ciências"];
+export const AREAS = ["Tecnologia", "Artes", "Esportes", "Ciências", "Humanidades", "Outra"];
+const classe = "/classes/Eletiva";
 const tamanhoPagina = 25;
 
 export async function listarEletivas(
@@ -15,16 +19,17 @@ export async function listarEletivas(
 ) {
   const termo = busca.trim().replace(/[.*+?^$(){}|[\]\\]/g, "\\$&");
   const { results } = await solicitar<{ results: Eletiva[] }>({
-    url: "/classes/Eletiva",
+    url: classe,
     method: "GET",
     signal,
     params: {
       where: JSON.stringify({
-        arquivada: { $ne: true },
+        arquivado: { $ne: true },
         ...(area ? { area } : {}),
         ...(termo ? { titulo: { $regex: termo, $options: "i" } } : {}),
       }),
-      keys: "titulo,descricao,area",
+      include: "professor",
+      keys: "titulo,descricao,area,professor.nome",
       order: "titulo,objectId",
       limit: tamanhoPagina,
       skip: pagina,
@@ -39,19 +44,22 @@ export async function listarEletivas(
 export function salvarEletiva(sessao: SessaoAlunos, dados: DadosEletiva, id?: string) {
   const titulo = dados.titulo.trim();
   const descricao = dados.descricao.trim();
+  const professorId = dados.professorId.trim();
   if (!titulo || titulo.length > 120) throw new ErroAlunos("Informe um título com até 120 caracteres.");
   if (descricao.length > 500) throw new ErroAlunos("A descrição pode ter até 500 caracteres.");
+  if (!AREAS.includes(dados.area)) throw new ErroAlunos("Selecione a área da eletiva.");
+  if (!professorId) throw new ErroAlunos("Selecione um professor.");
   return solicitar({
-    url: id ? "/classes/Eletiva/" + encodeURIComponent(id) : "/classes/Eletiva",
+    url: id ? classe + "/" + encodeURIComponent(id) : classe,
     method: id ? "PUT" : "POST",
-    data: { titulo, descricao, area: dados.area },
+    data: { titulo, descricao, area: dados.area, professor: { __type: "Pointer", className: "Professor", objectId: professorId } },
   }, sessao.token);
 }
 
 export function arquivarEletiva(sessao: SessaoAlunos, id: string) {
   return solicitar({
-    url: "/classes/Eletiva/" + encodeURIComponent(id),
+    url: classe + "/" + encodeURIComponent(id),
     method: "PUT",
-    data: { arquivada: true },
+    data: { arquivado: true },
   }, sessao.token);
 }

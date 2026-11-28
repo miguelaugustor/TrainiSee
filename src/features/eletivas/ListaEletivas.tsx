@@ -1,11 +1,13 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "expo-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FlatList, ScrollView, StyleSheet, View } from "react-native";
 import {
-  ActivityIndicator, Button, Card, Chip, Dialog, HelperText, Portal, Searchbar, Snackbar, Text, TextInput, useTheme,
+  ActivityIndicator, Button, Card, Chip, Dialog, HelperText, List, Portal, Searchbar, Snackbar, Text, TextInput, useTheme,
 } from "react-native-paper";
 import { Page } from "../../components/Page";
 import { sessaoExpirada, type SessaoAlunos } from "../alunos/api";
+import { listarProfessores } from "../professores/api";
 import {
   AREAS, arquivarEletiva, listarEletivas, salvarEletiva, type DadosEletiva, type Eletiva,
 } from "./api";
@@ -17,7 +19,7 @@ type Props = {
   aoExpirar: () => Promise<void>;
   botaoSair?: ReactNode;
 };
-type Edicao = DadosEletiva & { id?: string };
+type Edicao = DadosEletiva & { id?: string; professorNome?: string };
 type Acao = { tipo: "salvar"; edicao: Edicao } | { tipo: "arquivar"; eletiva: Eletiva };
 
 export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Props) {
@@ -26,6 +28,7 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
   const { busca: textoBusca, area, setBusca: setTextoBusca, setArea } = useEletivasStore();
   const [busca, setBusca] = useState("");
   const [edicao, setEdicao] = useState<Edicao | null>(null);
+  const [escolhendoProfessor, setEscolhendoProfessor] = useState(false);
   const [exclusao, setExclusao] = useState<Eletiva | null>(null);
   const [aviso, setAviso] = useState("");
   const bloqueio = useRef(false);
@@ -42,15 +45,27 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
     queryFn: ({ pageParam, signal }) => listarEletivas(sessao, pageParam, signal, busca, area ?? ""),
     getNextPageParam: (pagina) => pagina.proxima,
   });
+  const professores = useInfiniteQuery({
+    queryKey: ["professores", sessao.usuarioId],
+    enabled: escolhendoProfessor,
+    initialPageParam: 0,
+    queryFn: ({ pageParam, signal }) => listarProfessores(sessao, pageParam, signal),
+    getNextPageParam: (pagina) => pagina.proxima,
+  });
   const alteracao = useMutation({
     mutationFn: (acao: Acao) => acao.tipo === "salvar"
       ? salvarEletiva(sessao, acao.edicao, acao.edicao.id)
       : arquivarEletiva(sessao, acao.eletiva.objectId),
     async onSuccess(_resposta, acao) {
-      await cache.invalidateQueries({ queryKey: chave });
+      await Promise.all([
+        cache.invalidateQueries({ queryKey: chave }),
+        cache.invalidateQueries({ queryKey: ["eletivas-para-matricula", sessao.usuarioId] }),
+        cache.invalidateQueries({ queryKey: ["matriculas", sessao.usuarioId] }),
+        cache.invalidateQueries({ queryKey: ["consulta-escolar", sessao.usuarioId] }),
+      ]);
       setEdicao(null);
       setExclusao(null);
-      setAviso(acao.tipo === "arquivar" ? "Eletiva excluída."
+      setAviso(acao.tipo === "arquivar" ? "Eletiva arquivada."
         : acao.edicao.id ? "Eletiva atualizada." : "Eletiva cadastrada.");
     },
     onSettled() {
@@ -58,7 +73,8 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
     },
   });
 
-  const expirou = sessaoExpirada(lista.error) || sessaoExpirada(alteracao.error);
+  const expirou = sessaoExpirada(lista.error) || sessaoExpirada(alteracao.error) ||
+    (escolhendoProfessor && sessaoExpirada(professores.error));
   useEffect(() => {
     if (expirou) void aoExpirar();
   }, [aoExpirar, expirou]);
@@ -72,11 +88,62 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
   function comecarEdicao(eletiva?: Eletiva) {
     alteracao.reset();
     setEdicao(eletiva
-      ? { id: eletiva.objectId, titulo: eletiva.titulo ?? "", descricao: eletiva.descricao ?? "", area: eletiva.area ?? AREAS[0] }
-      : { titulo: "", descricao: "", area: AREAS[0] });
+      ? {
+        id: eletiva.objectId,
+        titulo: eletiva.titulo ?? "",
+        descricao: eletiva.descricao ?? "",
+        area: AREAS.includes(eletiva.area) ? eletiva.area : "",
+        professorId: eletiva.professor?.objectId ?? "",
+        professorNome: eletiva.professor?.nome,
+      }
+      : { titulo: "", descricao: "", area: AREAS[0], professorId: "" });
   }
 
   if (expirou) return <Page><ActivityIndicator accessibilityLabel="Encerrando sessão" /></Page>;
+
+  if (edicao && escolhendoProfessor) {
+    const registros = [...new Map(professores.data?.pages.flatMap((pagina) =>
+      pagina.registros.map((professor) => [professor.objectId, professor] as const))).values()];
+    return (
+      <Page>
+        <View style={styles.bloco}>
+          <Text accessibilityRole="header" variant="titleLarge">Selecionar professor</Text>
+          <Button icon="arrow-left" onPress={() => setEscolhendoProfessor(false)}>Voltar à eletiva</Button>
+          {professores.isPending ? <ActivityIndicator accessibilityLabel="Carregando professores" /> : null}
+          {professores.isSuccess && !registros.length ? (
+            <>
+              <Text>Cadastre um professor para criar uma eletiva.</Text>
+              <Link asChild href={{ pathname: "/alunos", params: { secao: "professores" } }}>
+                <Button mode="outlined">Abrir Professores</Button>
+              </Link>
+            </>
+          ) : null}
+          {registros.map((professor) => (
+            <List.Item
+              key={professor.objectId}
+              title={professor.nome || "Professor sem nome"}
+              onPress={() => {
+                alteracao.reset();
+                setEdicao({ ...edicao, professorId: professor.objectId, professorNome: professor.nome });
+                setEscolhendoProfessor(false);
+              }}
+            />
+          ))}
+          {professores.isError ? (
+            <>
+              <HelperText type="error" accessibilityLiveRegion="polite">{professores.error.message}</HelperText>
+              <Button mode="outlined" disabled={professores.isFetching} onPress={() => void professores.refetch()}>
+                Tentar novamente
+              </Button>
+            </>
+          ) : professores.hasNextPage ? (
+            <Button loading={professores.isFetchingNextPage} disabled={professores.isFetching}
+              onPress={() => void professores.fetchNextPage()}>Carregar mais professores</Button>
+          ) : null}
+        </View>
+      </Page>
+    );
+  }
 
   if (edicao) {
     return (
@@ -116,12 +183,17 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
               </Chip>
             ))}
           </View>
+          <Text variant="labelLarge">Professor responsável</Text>
+          <Button mode="outlined" icon="account-tie" disabled={alteracao.isPending}
+            onPress={() => setEscolhendoProfessor(true)}>
+            {edicao.professorNome || (edicao.professorId ? "Professor vinculado" : "Selecionar professor")}
+          </Button>
           {alteracao.error ? (
             <HelperText type="error" accessibilityLiveRegion="polite">{alteracao.error.message}</HelperText>
           ) : null}
           <Button
             mode="contained"
-            disabled={alteracao.isPending}
+            disabled={alteracao.isPending || !edicao.professorId || !edicao.titulo.trim() || !edicao.area}
             loading={alteracao.isPending}
             onPress={() => executar({ tipo: "salvar", edicao })}
           >
@@ -181,7 +253,8 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
           )}
         renderItem={({ item }) => (
           <Card mode="outlined">
-            <Card.Title title={item.titulo || "Eletiva sem título"} subtitle={item.area} />
+            <Card.Title title={item.titulo || "Eletiva sem título"}
+              subtitle={[item.area, item.professor?.nome].filter(Boolean).join(" · ")} />
             {item.descricao ? (
               <Card.Content>
                 <Text variant="bodyMedium">{item.descricao}</Text>
@@ -196,7 +269,7 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
                     setExclusao(item);
                   }}
                 >
-                  Excluir
+                  Arquivar
                 </Button>
                 <Button onPress={() => comecarEdicao(item)}>Editar</Button>
               </Card.Actions>
@@ -224,7 +297,7 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
           dismissable={!alteracao.isPending}
           onDismiss={() => setExclusao(null)}
         >
-          <Dialog.Title>Excluir eletiva?</Dialog.Title>
+          <Dialog.Title>Arquivar eletiva?</Dialog.Title>
           <Dialog.Content>
             <Text>{exclusao?.titulo || "A eletiva"} sairá da lista. As matrículas e aulas ligadas a ela são preservadas.</Text>
             {alteracao.error ? <HelperText type="error">{alteracao.error.message}</HelperText> : null}
@@ -237,7 +310,7 @@ export function ListaEletivas({ sessao, podeEditar, aoExpirar, botaoSair }: Prop
               loading={alteracao.isPending}
               onPress={() => exclusao && executar({ tipo: "arquivar", eletiva: exclusao })}
             >
-              Excluir
+              Arquivar
             </Button>
           </Dialog.Actions>
         </Dialog>

@@ -33,7 +33,10 @@ export function ListaProfessores({ sessao, aoVoltar, aoExpirar }: Props) {
       ? salvarProfessor(sessao, acao.edicao, acao.edicao.id)
       : arquivarProfessor(sessao, acao.professor.objectId),
     async onSuccess(_resultado, acao) {
-      await cache.invalidateQueries({ queryKey: chave });
+      await Promise.all([
+        cache.invalidateQueries({ queryKey: chave }),
+        cache.invalidateQueries({ queryKey: ["eletivas", sessao.usuarioId] }),
+      ]);
       setEdicao(null);
       setArquivamento(null);
       setAviso(acao.tipo === "arquivar" ? "Professor arquivado." : "Professor salvo.");

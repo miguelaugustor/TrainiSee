@@ -14,7 +14,7 @@ export default function Eletivas() {
             botaoSair={acesso.botaoSair}
           />
         ) : (
-          <ConsultaEscolar {...acesso} />
+          <ConsultaEscolar {...acesso} somente="eletivas" />
         )
       }
     </AcessoEscolar>
