@@ -23,7 +23,7 @@ const api = create({
 export type DadosAluno = { nome: string; matricula: string };
 export type Aluno = DadosAluno & { objectId: string };
 export type SessaoAlunos = { usuarioId: string; email: string; token: string };
-type UsuarioParse = { objectId: string; email?: string; username?: string };
+type UsuarioParse = { objectId: string; username?: string };
 type Opcoes = Omit<AxiosRequestConfig, "headers"> & { headers?: Record<string, string> };
 
 export class ErroAlunos extends Error {
@@ -39,7 +39,6 @@ const mensagens: Record<number, string> = {
   137: "Já existe um registro com esses dados.",
   202: "Já existe uma conta com esse e-mail.",
   203: "Já existe uma conta com esse e-mail.",
-  205: "Confirme seu e-mail antes de entrar.",
   209: "Sua sessão terminou. Entre novamente.",
 };
 
@@ -86,7 +85,7 @@ export async function restaurarSessao(signal?: AbortSignal) {
   if (!token || signal?.aborted) return null;
   try {
     const usuario = await solicitar<UsuarioParse>({ url: "/users/me", method: "GET", signal }, token);
-    return { usuarioId: usuario.objectId, email: usuario.email ?? usuario.username ?? "", token };
+    return { usuarioId: usuario.objectId, email: usuario.username ?? "", token };
   } catch (erro) {
     if (!sessaoExpirada(erro)) throw erro;
     await esquecerSessao();
@@ -95,15 +94,14 @@ export async function restaurarSessao(signal?: AbortSignal) {
 }
 
 export async function autenticar(email: string, senha: string, cadastro: boolean) {
-  const dados = { username: email, password: senha, ...(cadastro ? { email } : {}) };
   const usuario = await solicitar<UsuarioParse & { sessionToken?: string }>({
     url: cadastro ? "/users" : "/login",
     method: "POST",
     headers: { "X-Parse-Revocable-Session": "1" },
-    data: dados,
+    data: { username: email, password: senha },
   });
   if (!usuario.objectId || !usuario.sessionToken) {
-    throw new ErroAlunos("Confirme seu e-mail e entre com a conta criada.");
+    throw new ErroAlunos("Não foi possível iniciar a sessão. Tente entrar novamente.");
   }
   if (usaArmazenamentoNativo) {
     try {

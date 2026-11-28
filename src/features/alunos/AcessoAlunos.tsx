@@ -19,7 +19,7 @@ export function AcessoAlunos({ aoEntrar, aviso, titulo = "Acessar Alunos" }: Pro
     if (bloqueio.current) return;
     const emailNormalizado = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalizado)) {
-      setErro("Informe um e-mail válido.");
+      setErro("Informe um e-mail de acesso válido.");
       return;
     }
     if (!senha || (cadastro && senha.length < 8)) {
@@ -64,14 +64,14 @@ export function AcessoAlunos({ aoEntrar, aviso, titulo = "Acessar Alunos" }: Pro
           {cadastro ? "Criar conta" : titulo}
         </Text>
         {aviso ? <Text accessibilityLiveRegion="polite">{aviso}</Text> : null}
-        {cadastro ? <Text>Confirme seu e-mail para que a escola possa vincular a sua conta.</Text> : null}
+        {cadastro ? <Text>Você pode usar um endereço fictício, como aluno@escola.test.</Text> : null}
         <TextInput
-          label="E-mail"
+          label="E-mail de acesso"
           mode="outlined"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
-          autoComplete="email"
+          autoComplete="username"
           autoCapitalize="none"
           autoCorrect={false}
           disabled={enviando}

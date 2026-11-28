@@ -324,10 +324,10 @@ Parse.Cloud.define("vincularContaEscolar", async (request) => {
     return { email: null };
   }
   if (registro.get("arquivado")) reject("O cadastro está arquivado.");
-  const endereco = typeof email === "string" ? email.trim().toLowerCase() : "";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(endereco) || endereco.length > 160) reject("Informe um e-mail válido.");
-  const usuario = await new Parse.Query(Parse.User).equalTo("email", endereco).first(master);
-  if (!usuario || usuario.get("emailVerified") !== true) reject("A conta precisa existir e ter e-mail verificado.");
+  const login = typeof email === "string" ? email.trim().toLowerCase() : "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login) || login.length > 160) reject("Informe um e-mail de acesso válido.");
+  const usuario = await new Parse.Query(Parse.User).equalTo("username", login).first(master);
+  if (!usuario) reject("Crie a conta no aplicativo antes de vinculá-la.");
   if (await ehAdministrador(usuario)) reject("Esta conta já é administradora.");
   for (const alvo of ["Aluno", "Professor"]) {
     const consulta = new Parse.Query(alvo).equalTo("conta", usuario);
@@ -335,7 +335,7 @@ Parse.Cloud.define("vincularContaEscolar", async (request) => {
     if (await consulta.first(master)) reject("Esta conta já está vinculada a outro cadastro.");
   }
   await registro.save({ conta: usuario }, master);
-  return { email: endereco };
+  return { email: login };
 });
 
 async function aulaParaFrequencia(acesso, id) {

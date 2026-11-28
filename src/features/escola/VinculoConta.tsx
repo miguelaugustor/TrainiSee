@@ -50,7 +50,7 @@ export function VinculoConta({ sessao, tipo, registroId, nome, aoFechar, aoExpir
           ) : confirmaRemocao ? (
             <Text>O acesso deste cadastro pela conta será revogado.</Text>
           ) : (
-            <TextInput label="E-mail da conta verificada" mode="outlined" value={email} onChangeText={setEmail}
+            <TextInput label="E-mail de acesso da conta" mode="outlined" value={email} onChangeText={setEmail}
               maxLength={160} autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
               disabled={alteracao.isPending}
             />
