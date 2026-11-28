@@ -2,7 +2,7 @@
 
 const role = "EquipeEscolar";
 const master = { useMasterKey: true };
-const areas = ["Artes", "Ciências", "Esportes", "Humanidades", "Tecnologia", "Outra"];
+const areas = ["Artes", "Ciências", "Esportes", "Humanidades", "Idiomas", "Tecnologia", "Outra"];
 
 function reject(message) {
   throw new Parse.Error(Parse.Error.VALIDATION_ERROR, message);
@@ -21,13 +21,17 @@ function samePointer(original, key, pointer) {
   return original?.get(key)?.id === pointer.id;
 }
 
+function isArchived(object) {
+  return object?.get("arquivado") || (object?.className === "Eletiva" && object.get("arquivada"));
+}
+
 async function reference(request, key, target, label) {
   const pointer = request.object.get(key);
   if (!pointer?.id || pointer.className !== target) {
     reject(`Selecione ${label}.`);
   }
   const record = await new Parse.Query(target).get(pointer.id, master);
-  if (record.get("arquivado") && !samePointer(request.original, key, pointer)) {
+  if (isArchived(record) && !samePointer(request.original, key, pointer)) {
     reject(`O registro de ${label} foi excluído da lista.`);
   }
   return record;
@@ -106,13 +110,13 @@ const archivedClasses = ["Aluno", "Professor", "Eletiva", "Aula"];
 for (const [className, validateRecord] of Object.entries(validate)) {
   Parse.Cloud.beforeSave(className, async (request) => {
     const { object, original } = request;
-    if (!request.master && (className === "Aluno" || className === "Professor") && object.dirty("conta")) {
+    if (!request.master && (className === "Aluno" || className === "Professor") && object.dirtyKeys().includes("conta")) {
       reject("Use a opção de vincular conta no aplicativo.");
     }
-    if (!request.master && original?.get("arquivado")) {
+    if (!request.master && isArchived(original)) {
       reject("Este registro foi excluído da lista.");
     }
-    if (!request.master && !original && object.get("arquivado")) {
+    if (!request.master && !original && isArchived(object)) {
       reject("Cadastre o registro antes de excluí-lo.");
     }
     await validateRecord(request);
@@ -179,7 +183,9 @@ function buscarEm(classe, campos, termo) {
 }
 
 function eletivasDoPerfil(acesso, termo) {
-  const consulta = buscarEm("Eletiva", ["titulo", "area"], termo).notEqualTo("arquivado", true);
+  const consulta = buscarEm("Eletiva", ["titulo", "area"], termo)
+    .notEqualTo("arquivado", true)
+    .notEqualTo("arquivada", true);
   if (acesso.perfil === "professor") consulta.equalTo("professor", acesso.registro);
   return consulta;
 }
@@ -324,10 +330,10 @@ Parse.Cloud.define("vincularContaEscolar", async (request) => {
     return { email: null };
   }
   if (registro.get("arquivado")) reject("O cadastro está arquivado.");
-  const endereco = typeof email === "string" ? email.trim().toLowerCase() : "";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(endereco) || endereco.length > 160) reject("Informe um e-mail válido.");
-  const usuario = await new Parse.Query(Parse.User).equalTo("email", endereco).first(master);
-  if (!usuario || usuario.get("emailVerified") !== true) reject("A conta precisa existir e ter e-mail verificado.");
+  const login = typeof email === "string" ? email.trim().toLowerCase() : "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login) || login.length > 160) reject("Informe um e-mail de acesso válido.");
+  const usuario = await new Parse.Query(Parse.User).equalTo("username", login).first(master);
+  if (!usuario) reject("Crie a conta no aplicativo antes de vinculá-la.");
   if (await ehAdministrador(usuario)) reject("Esta conta já é administradora.");
   for (const alvo of ["Aluno", "Professor"]) {
     const consulta = new Parse.Query(alvo).equalTo("conta", usuario);
@@ -335,7 +341,7 @@ Parse.Cloud.define("vincularContaEscolar", async (request) => {
     if (await consulta.first(master)) reject("Esta conta já está vinculada a outro cadastro.");
   }
   await registro.save({ conta: usuario }, master);
-  return { email: endereco };
+  return { email: login };
 });
 
 async function aulaParaFrequencia(acesso, id) {

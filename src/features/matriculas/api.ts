@@ -3,7 +3,7 @@ import { ErroAlunos, solicitar, type Aluno, type SessaoAlunos } from "../alunos/
 const classe = "/classes/Matricula";
 const tamanhoPagina = 25;
 
-export type EletivaResumo = { objectId: string; titulo?: string; area?: string; arquivado?: boolean };
+export type EletivaResumo = { objectId: string; titulo?: string; area?: string; arquivado?: boolean; arquivada?: boolean };
 export type SituacaoMatricula = "ativa" | "inativa";
 export type Matricula = { objectId: string; eletiva?: EletivaResumo; situacao?: SituacaoMatricula };
 
@@ -45,7 +45,7 @@ export async function listarEletivasParaMatricula(sessao: SessaoAlunos, pagina: 
     method: "GET",
     signal,
     params: {
-      where: JSON.stringify({ arquivado: { $ne: true } }),
+      where: JSON.stringify({ arquivado: { $ne: true }, arquivada: { $ne: true } }),
       keys: "titulo,area",
       order: "titulo,objectId",
       limit: tamanhoPagina,

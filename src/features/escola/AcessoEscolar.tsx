@@ -148,7 +148,7 @@ export function AcessoEscolar({ titulo, children }: { titulo: string; children: 
     return (
       <Page>
         <Text variant="titleLarge" accessibilityRole="header">Aguardando vínculo</Text>
-        <Text>Confirme seu e-mail e peça à escola para vincular a conta ao cadastro de aluno ou professor.</Text>
+        <Text>Peça à escola para vincular seu e-mail de acesso ao cadastro de aluno ou professor.</Text>
         <Button mode="contained" disabled={consulta.isFetching || saindo} onPress={() => void consulta.refetch()}>
           Verificar acesso
         </Button>
