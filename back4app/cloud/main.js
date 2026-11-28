@@ -106,7 +106,7 @@ const archivedClasses = ["Aluno", "Professor", "Eletiva", "Aula"];
 for (const [className, validateRecord] of Object.entries(validate)) {
   Parse.Cloud.beforeSave(className, async (request) => {
     const { object, original } = request;
-    if (!request.master && (className === "Aluno" || className === "Professor") && object.dirty("conta")) {
+    if (!request.master && (className === "Aluno" || className === "Professor") && object.dirtyKeys().includes("conta")) {
       reject("Use a opção de vincular conta no aplicativo.");
     }
     if (!request.master && original?.get("arquivado")) {
